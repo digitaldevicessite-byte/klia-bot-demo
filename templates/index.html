@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>KLIA Bot – Karnataka Legal Info</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f6f9; color: #333; line-height: 1.6; }
+    .container { max-width: 800px; margin: 40px auto; padding: 20px; background: white; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    header h1 { color: #1a5276; }
+    input, button { padding: 10px; margin: 10px 0; }
+    input { width: 70%; border: 1px solid #ccc; border-radius: 4px; }
+    button { background: #2980b9; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    button:hover { background: #1a5276; }
+    .card { border: 1px solid #ddd; padding: 15px; border-radius: 8px; background: #f9f9f9; margin-top: 10px; }
+    .error { color: #c0392b; padding: 10px; background: #fadbd8; border-radius: 4px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🔍 KLIA Bot</h1>
+      <p><strong>Karnataka Legal Information Assistant</strong><br>
+      Search public case status (for awareness only)</p>
+    </header>
+
+    <form id="searchForm">
+      <input type="text" id="caseNumber" placeholder="Enter Case Number (e.g., CRC/1/2020)" required />
+      <button type="submit">Search Case</button>
+    </form>
+
+    <div id="loading" style="display: none;">🔍 Searching... (wait 5 sec)</div>
+    <div id="result"></div>
+    <div id="feedbackForm" style="display: none;">
+      <h3>📝 Your Feedback</h3>
+      <p>Help us improve!</p>
+      <label>Rate: 
+        <select id="rating">
+          <option value="5">⭐⭐⭐⭐⭐ Excellent</option>
+          <option value="4">⭐⭐⭐⭐ Good</option>
+          <option value="3">⭐⭐⭐ Average</option>
+          <option value="2">⭐⭐ Poor</option>
+          <option value="1">⭐ Very Poor</option>
+        </select>
+      </label>
+      <br>
+      <textarea id="comments" placeholder="Suggestions?" rows="3" style="width:100%"></textarea>
+      <br>
+      <button type="button" onclick="submitFeedback()">Submit Feedback</button>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById("searchForm");
+    const resultDiv = document.getElementById("result");
+    const loading = document.getElementById("loading");
+    const feedbackForm = document.getElementById("feedbackForm");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const caseNum = document.getElementById("caseNumber").value.trim();
+      resultDiv.innerHTML = "";
+      feedbackForm.style.display = "none";
+      loading.style.display = "block";
+
+      const res = await fetch("/search", {
+        method: "POST",
+        body: new FormData(form)
+      });
+
+      const data = await res.json();
+      loading.style.display = "none";
+
+      if (data.error) {
+        resultDiv.innerHTML = `<div class="error">❌ ${data.error}</div>`;
+      } else {
+        resultDiv.innerHTML = `
+          <div class="card">
+            <h3>📋 ${data.case_title}</h3>
+            <p><strong>Status:</strong> ${data.status}</p>
+            <p><strong>Court:</strong> ${data.court_name}</p>
+            <p><strong>Petitioner:</strong> ${data.petitioner}</p>
+            <p><strong>Respondent:</strong> ${data.respondent}</p>
+            <p><strong>Filing Date:</strong> ${data.filing_date}</p>
+            <p><strong>Last Listed:</strong> ${data.last_listed}</p>
+            <p><strong>Next Date:</strong> ${data.next_listed}</p>
+            <p><strong>Acts:</strong> ${data.acts}</p>
+            <small>Source: ${data.source}</small>
+          </div>
+        `;
+        feedbackForm.style.display = "block";
+        window.currentCase = caseNum;
+      }
+    });
+
+    function submitFeedback() {
+      const rating = document.getElementById("rating").value;
+      const comments = document.getElementById("comments").value;
+
+      fetch("/submit_feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          case: window.currentCase,
+          rating,
+          comments
+        })
+      })
+      .then(() => {
+        alert("Thank you for your feedback!");
+        document.getElementById("feedbackForm").style.display = "none";
+      })
+      .catch(() => alert("Failed to submit feedback."));
+    }
+  </script>
+</body>
+</html>
